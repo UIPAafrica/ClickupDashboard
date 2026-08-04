@@ -47,7 +47,14 @@ const fetchTasks = async (): Promise<TasksResponse> => {
   const response = await fetch('/api/tasks');
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch tasks: ${response.status}`);
+    const message = await response
+      .json()
+      .then((body) => [body?.error, body?.details].filter(Boolean).join(': '))
+      .catch(() => '');
+
+    throw new Error(
+      message || `Failed to fetch tasks: ${response.status}`
+    );
   }
 
   return response.json();
