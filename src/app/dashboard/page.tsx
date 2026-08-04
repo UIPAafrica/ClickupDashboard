@@ -15,8 +15,6 @@ import { ReviewTasksTable } from "@/components/review-tasks-table";
 export default function DashboardPage() {
   const { data, isLoading, error, refetch, isFetching } = useTasks();
 
-  console.log("data from the dashboard page", data);
-
   const handleRefresh = () => {
     refetch();
   };

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 
 interface ClickUpTask {
@@ -150,7 +150,7 @@ function isDateThisWeek(dateString: string | null | undefined): boolean {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const apiKey = process.env.CLICKUP_API_KEY;
     const teamId = process.env.CLICKUP_TEAM_ID;
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch tasks from ClickUp API
     const response = await fetch(
-      `https://api.clickup.com/api/v2/team/9012733295/task?include_closed=true`,
+      `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true`,
       {
         headers: {
           Authorization: apiKey,
@@ -175,12 +175,14 @@ export async function GET(request: NextRequest) {
     );
 
     if (!response.ok) {
-      throw new Error(`ClickUp API error: ${response.status} ${response.statusText}`);
+      const body = await response.text().catch(() => '');
+      throw new Error(
+        `ClickUp API error: ${response.status} ${response.statusText}${body ? ` - ${body}` : ''}`
+      );
     }
 
     const data: ClickUpResponse = await response.json();
 
-    console.log("data  from clickup api", data.tasks[0].status);
     const tasks = data.tasks || [];
 
     // Group tasks by project
@@ -250,15 +252,6 @@ export async function GET(request: NextRequest) {
       const todoProjectTasks = projectTasks.filter(isTaskTodo);
       const inProgressProjectTasks = projectTasks.filter(isTaskInProgress);
       const completedProjectTasks = projectTasks.filter(isTaskCompleted);
-
-      // Debug logging
-      // console.log(`\nProject: ${project.name}`);
-      projectTasks.forEach(task => {
-        console.log(`Task: "${task.name}" - Status: "${task.status.status}" (${task.status.type})`);
-        console.log(`  - Completed: ${isTaskCompleted(task)}`);
-        console.log(`  - In Progress: ${isTaskInProgress(task)}`);
-        console.log(`  - Todo: ${isTaskTodo(task)}`);
-      });
 
       // Total tasks = Todo + In Progress + Completed (all tasks in the project)
       const totalProjectTasks = todoProjectTasks.length + inProgressProjectTasks.length + completedProjectTasks.length;
@@ -354,7 +347,6 @@ export async function GET(request: NextRequest) {
       }
     });
     const openTasksByAssignee = Array.from(assigneeOpenMap.values());
-    console.log("open tasks by assignee from the api route", openTasksByAssignee);
 
     return NextResponse.json({
       stats: dashboardStats,
@@ -367,7 +359,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching ClickUp tasks:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch tasks from ClickUp' },
+      {
+        error: 'Failed to fetch tasks from ClickUp',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

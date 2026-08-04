@@ -52,6 +52,8 @@ cp env.example .env.local
 ```bash
 CLICKUP_API_KEY=your_clickup_api_key_here
 CLICKUP_TEAM_ID=your_team_id_here
+# Optional: space used for the "Active Projects" count
+CLICKUP_SPACE_ID=your_space_id_here
 ```
 
 ### Getting ClickUp Credentials
@@ -131,6 +133,10 @@ Make sure to set the environment variables:
 
 - `CLICKUP_API_KEY`
 - `CLICKUP_TEAM_ID`
+- `CLICKUP_SPACE_ID` (optional)
+
+The server must be able to reach `api.clickup.com` — if outbound egress is
+restricted, allowlist that host or the dashboard will report a 403.
 
 ## Contributing
 
