@@ -36,6 +36,8 @@ interface ClickUpTask {
 
 interface ClickUpResponse {
   tasks: ClickUpTask[];
+  // ClickUp sets this on the final page of a paginated task listing.
+  last_page?: boolean;
 }
 
 interface ProjectData {
@@ -150,22 +152,18 @@ function isDateThisWeek(dateString: string | null | undefined): boolean {
   }
 }
 
-export async function GET() {
-  try {
-    const apiKey = process.env.CLICKUP_API_KEY;
-    const teamId = process.env.CLICKUP_TEAM_ID;
-    const spaceId = process.env.CLICKUP_SPACE_ID || '90125160522';
+// ClickUp returns at most 100 tasks per page, so a single request silently
+// truncates any workspace larger than that. Walk the pages until ClickUp says
+// it is done, bounded so a misbehaving response cannot loop forever.
+const CLICKUP_PAGE_SIZE = 100;
+const MAX_TASK_PAGES = 50;
 
-    if (!apiKey || !teamId) {
-      return NextResponse.json(
-        { error: 'Missing CLICKUP_API_KEY or CLICKUP_TEAM_ID environment variables' },
-        { status: 500 }
-      );
-    }
+async function fetchAllTasks(teamId: string, apiKey: string): Promise<ClickUpTask[]> {
+  const tasks: ClickUpTask[] = [];
 
-    // Fetch tasks from ClickUp API
+  for (let page = 0; page < MAX_TASK_PAGES; page++) {
     const response = await fetch(
-      `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true`,
+      `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&page=${page}`,
       {
         headers: {
           Authorization: apiKey,
@@ -182,8 +180,37 @@ export async function GET() {
     }
 
     const data: ClickUpResponse = await response.json();
+    const pageTasks = data.tasks || [];
+    tasks.push(...pageTasks);
 
-    const tasks = data.tasks || [];
+    // Prefer ClickUp's own flag, but fall back to a short page so we still
+    // terminate if `last_page` is absent.
+    if (data.last_page === true || pageTasks.length < CLICKUP_PAGE_SIZE) {
+      return tasks;
+    }
+  }
+
+  console.warn(
+    `Reached the ${MAX_TASK_PAGES}-page cap while fetching ClickUp tasks; results may be truncated.`
+  );
+  return tasks;
+}
+
+export async function GET() {
+  try {
+    const apiKey = process.env.CLICKUP_API_KEY;
+    const teamId = process.env.CLICKUP_TEAM_ID;
+    const spaceId = process.env.CLICKUP_SPACE_ID || '90125160522';
+
+    if (!apiKey || !teamId) {
+      return NextResponse.json(
+        { error: 'Missing CLICKUP_API_KEY or CLICKUP_TEAM_ID environment variables' },
+        { status: 500 }
+      );
+    }
+
+    // Fetch tasks from ClickUp API (all pages)
+    const tasks = await fetchAllTasks(teamId, apiKey);
 
     // Group tasks by project
     const projectsMap = new Map<string, {
