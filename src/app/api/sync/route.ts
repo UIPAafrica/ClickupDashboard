@@ -79,13 +79,32 @@ async function runSync(request: NextRequest) {
 
   // Open a run row first so a sync that dies mid-flight is still visible as
   // 'running' rather than leaving no trace at all.
-  const { data: run } = await supabase
+  //
+  // Failing here is reported rather than swallowed: this is the first write of
+  // the run, so it is the earliest signal that the Supabase credentials are
+  // wrong. Carrying on would lose the audit trail the table exists to provide —
+  // an anon key in place of the service role key is rejected by RLS right here.
+  const { data: run, error: runError } = await supabase
     .from('clickup_sync_runs')
     .insert({ status: 'running' })
     .select('id')
     .single();
 
-  const runId: string | undefined = run?.id;
+  if (runError || !run?.id) {
+    const detail = runError?.message ?? 'insert returned no row';
+    console.error('Could not open a clickup_sync_runs row:', detail);
+    return NextResponse.json(
+      {
+        error: 'Could not write to Supabase',
+        details:
+          `${detail}. Check SUPABASE_SERVICE_ROLE_KEY is the service role key ` +
+          `(not the anon/publishable key) and that the clickup_ tables exist.`,
+      },
+      { status: 500 }
+    );
+  }
+
+  const runId: string = run.id;
 
   try {
     const tasks = await fetchAllTasks(teamId, apiKey);
@@ -207,17 +226,15 @@ async function runSync(request: NextRequest) {
       if (error) throw new Error(`snapshot upsert failed: ${error.message}`);
     }
 
-    if (runId) {
-      await supabase
-        .from('clickup_sync_runs')
-        .update({
-          status: 'success',
-          finished_at: new Date().toISOString(),
-          tasks_synced: taskRows.length,
-          projects_synced: projectRows.length,
-        })
-        .eq('id', runId);
-    }
+    await supabase
+      .from('clickup_sync_runs')
+      .update({
+        status: 'success',
+        finished_at: new Date().toISOString(),
+        tasks_synced: taskRows.length,
+        projects_synced: projectRows.length,
+      })
+      .eq('id', runId);
 
     return NextResponse.json({
       status: 'success',
@@ -230,12 +247,10 @@ async function runSync(request: NextRequest) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('ClickUp -> Supabase sync failed:', message);
 
-    if (runId) {
-      await supabase
-        .from('clickup_sync_runs')
-        .update({ status: 'error', finished_at: new Date().toISOString(), error: message })
-        .eq('id', runId);
-    }
+    await supabase
+      .from('clickup_sync_runs')
+      .update({ status: 'error', finished_at: new Date().toISOString(), error: message })
+      .eq('id', runId);
 
     return NextResponse.json(
       { error: 'Sync failed', details: message },
