@@ -10,7 +10,7 @@ import {
 import { TaskSummary } from "@/hooks/use-tasks";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
 interface TaskOverviewTableProps {
   tasks: TaskSummary[];

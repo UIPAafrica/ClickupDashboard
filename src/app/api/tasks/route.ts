@@ -5,11 +5,10 @@ import {
   fetchSpaceFolders,
   getClickUpConfig,
   getProjectInfo,
+  getTaskBucket,
   isDateThisWeek,
   isTaskCompleted,
-  isTaskInProgress,
   isTaskInReview,
-  isTaskTodo,
   isTaskUnassigned,
 } from '@/lib/clickup';
 
@@ -20,6 +19,7 @@ interface ProjectData {
   counters: {
     todo: number;
     inProgress: number;
+    review: number;
     completed: number;
     completedThisWeek: number;
     dueThisWeek: number;
@@ -91,10 +91,11 @@ export async function GET() {
       projectsMap.get(projectKey)!.tasks.push(task);
     });
 
-    // Calculate dashboard statistics
+    // Calculate dashboard statistics. Buckets are mutually exclusive, so a task
+    // in review is never also counted as in progress or todo.
     const totalTasks = tasks.length;
     const unassignedTasks = tasks.filter(isTaskUnassigned);
-    const inProgressTasks = tasks.filter(isTaskInProgress);
+    const inProgressTasks = tasks.filter(task => getTaskBucket(task) === 'in_progress');
     const completedTasks = tasks.filter(isTaskCompleted);
     const completedThisWeekTasks = completedTasks.filter(task =>
       isDateThisWeek(task.date_done)
@@ -117,13 +118,18 @@ export async function GET() {
     const projects: ProjectData[] = Array.from(projectsMap.values()).map(project => {
       const { tasks: projectTasks } = project;
 
-      // Separate tasks by status
-      const todoProjectTasks = projectTasks.filter(isTaskTodo);
-      const inProgressProjectTasks = projectTasks.filter(isTaskInProgress);
+      // Separate tasks by bucket. Each task lands in exactly one, so nothing is
+      // counted twice and nothing falls through the gaps.
+      const buckets = projectTasks.map(getTaskBucket);
+      const todoProjectTasks = buckets.filter(b => b === 'todo').length;
+      const inProgressProjectTasks = buckets.filter(b => b === 'in_progress').length;
+      const reviewProjectTasks = buckets.filter(b => b === 'review').length;
       const completedProjectTasks = projectTasks.filter(isTaskCompleted);
 
-      // Total tasks = Todo + In Progress + Completed (all tasks in the project)
-      const totalProjectTasks = todoProjectTasks.length + inProgressProjectTasks.length + completedProjectTasks.length;
+      // Review counts toward the total. Leaving it out treated work awaiting
+      // review as if it did not exist, which overstated progress.
+      const totalProjectTasks =
+        todoProjectTasks + inProgressProjectTasks + reviewProjectTasks + completedProjectTasks.length;
 
       // Tasks completed this week
       const completedThisWeekProjectTasks = completedProjectTasks.filter(task =>
@@ -135,7 +141,7 @@ export async function GET() {
         isDateThisWeek(task.due_date)
       );
 
-      // Calculate progress: completed tasks / (todo + in progress + completed) * 100
+      // Calculate progress: completed / (todo + in progress + review + completed)
       const progress = totalProjectTasks > 0
         ? Math.round((completedProjectTasks.length / totalProjectTasks) * 100)
         : 0;
@@ -145,8 +151,9 @@ export async function GET() {
         name: project.name,
         progress,
         counters: {
-          todo: todoProjectTasks.length,
-          inProgress: inProgressProjectTasks.length,
+          todo: todoProjectTasks,
+          inProgress: inProgressProjectTasks,
+          review: reviewProjectTasks,
           completed: completedProjectTasks.length,
           completedThisWeek: completedThisWeekProjectTasks.length,
           dueThisWeek: dueThisWeekTasks.length,

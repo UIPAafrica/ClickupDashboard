@@ -8,6 +8,7 @@ import {
   Cell,
   Tooltip,
   Legend,
+  type PieLabelRenderProps,
 } from "recharts";
 
 interface AssigneeDatum {
@@ -54,16 +55,17 @@ export function OpenTasksPie({ data }: OpenTasksPieProps) {
   }));
 
   const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = (props: any) => {
-    const {
-      cx,
-      cy,
-      midAngle,
-      innerRadius = 40,
-      outerRadius = 100,
-      percent,
-      name,
-    } = props;
+
+  // Recharts types every field of the label payload as optional, so each one is
+  // coerced to a number before use rather than assumed present.
+  const renderCustomizedLabel = (props: PieLabelRenderProps) => {
+    const { percent, name } = props;
+    const cx = Number(props.cx) || 0;
+    const cy = Number(props.cy) || 0;
+    const midAngle = Number(props.midAngle) || 0;
+    const innerRadius = Number(props.innerRadius) || 40;
+    const outerRadius = Number(props.outerRadius) || 100;
+
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -121,9 +123,11 @@ export function OpenTasksPie({ data }: OpenTasksPieProps) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, _name: string, payload: any) => {
-                    const pct = total ? Math.round((value / total) * 100) : 0;
-                    return [`${value} (${pct}%)`, payload?.name];
+                  formatter={(value, _name, item) => {
+                    // Recharts types the tooltip value as possibly undefined.
+                    const count = typeof value === "number" ? value : 0;
+                    const pct = total ? Math.round((count / total) * 100) : 0;
+                    return [`${count} (${pct}%)`, item?.name];
                   }}
                 />
                 <Legend
