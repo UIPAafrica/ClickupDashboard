@@ -18,6 +18,9 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // CommonJS build config; require() is the correct idiom there.
+      "tailwind.config.js",
+      "postcss.config.mjs",
     ],
   },
 ];

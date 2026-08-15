@@ -1,6 +1,6 @@
 "use client";
 
-import { useTasks } from "@/hooks/use-tasks";
+import { formatRefreshInterval, useTasks } from "@/hooks/use-tasks";
 import { StatCard } from "@/components/stat-card";
 import { ProjectProgressTable } from "@/components/project-progress-table";
 import { TaskOverviewTable } from "@/components/task-overview-table";
@@ -10,7 +10,6 @@ import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { OpenTasksPie } from "@/components/open-tasks-pie";
-import { ReviewTasksTable } from "@/components/review-tasks-table";
 
 export default function DashboardPage() {
   const { data, isLoading, error, refetch, isFetching } = useTasks();
@@ -66,7 +65,7 @@ export default function DashboardPage() {
               <Image src="/logo.png" alt="Logo" width={150} height={150} />
               {/* <h1 className="text-2xl font-bold">UIP Africa</h1> */}
               <p className="text-sm pt-4 text-muted-foreground">
-                Real-time task overview • Auto-refresh every 30s
+                Task overview • Auto-refresh every {formatRefreshInterval()}
               </p>
             </div>
             <div className="flex items-center gap-2">

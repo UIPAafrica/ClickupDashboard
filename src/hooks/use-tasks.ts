@@ -7,6 +7,7 @@ export interface ProjectData {
   counters: {
     todo: number;
     inProgress: number;
+    review: number;
     completed: number;
     completedThisWeek: number;
     dueThisWeek: number;
@@ -60,11 +61,25 @@ const fetchTasks = async (): Promise<TasksResponse> => {
   return response.json();
 };
 
+/**
+ * How often the dashboard refetches, in seconds. The header label is derived
+ * from this rather than hard-coded, so the two cannot drift apart again — the
+ * UI claimed "every 30s" while this was set to three hours.
+ */
+export const REFRESH_INTERVAL_SECONDS = 10800;
+
+/** Human-readable form of REFRESH_INTERVAL_SECONDS, e.g. "3h" or "30s". */
+export function formatRefreshInterval(seconds = REFRESH_INTERVAL_SECONDS): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${Math.round((seconds / 3600) * 10) / 10}h`;
+}
+
 export const useTasks = () => {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    refetchInterval: 10800 * 1000, // Refetch every 30 seconds
-    staleTime: 10800 * 1000, // Consider data stale after 30 seconds
+    refetchInterval: REFRESH_INTERVAL_SECONDS * 1000,
+    staleTime: REFRESH_INTERVAL_SECONDS * 1000,
   });
 };

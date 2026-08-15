@@ -4,7 +4,9 @@ A real-time, fullscreen dashboard for ClickUp projects built with Next.js 14, Re
 
 ## Features
 
-- **Real-time Updates**: Auto-refreshes every 30 seconds
+- **Automatic Refresh**: Refetches on the interval set by `REFRESH_INTERVAL_SECONDS`
+  in `src/hooks/use-tasks.ts` (currently 3 hours). The header label is derived
+  from that constant, so the two cannot drift apart.
 - **Project Overview**: Shows progress, task counters, and weekly metrics
 - **Responsive Design**: Adapts to different screen sizes
 - **Modern UI**: Built with shadcn/ui and TailwindCSS

@@ -49,11 +49,13 @@ export function ProjectProgressTable({
           <Table className={compact ? "text-xs" : undefined}>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-[200px]">Project Name</TableHead>
-                <TableHead className="w-[120px]">Progress</TableHead>
-                <TableHead className="text-center">Todo</TableHead>
-                <TableHead className="text-center">In Progress</TableHead>
-                <TableHead className="text-center">Completed</TableHead>
+                <TableHead className="w-[130px]">Project Name</TableHead>
+                <TableHead className="w-[95px]">Progress</TableHead>
+                {/* Short headers: six columns have to fit a third of the screen. */}
+                <TableHead className="text-center px-1">Todo</TableHead>
+                <TableHead className="text-center px-1">Doing</TableHead>
+                <TableHead className="text-center px-1">Review</TableHead>
+                <TableHead className="text-center px-1">Done</TableHead>
                 {/* <TableHead className="text-center">This Week</TableHead> */}
               </TableRow>
             </TableHeader>
@@ -69,9 +71,12 @@ export function ProjectProgressTable({
                 </TableRow>
               ) : (
                 visible.map((project) => {
+                  // Mirrors the API's progress denominator, review included, so
+                  // the "completed/total" fraction reconciles with the columns.
                   const totalTasks =
                     project.counters.todo +
                     project.counters.inProgress +
+                    project.counters.review +
                     project.counters.completed;
                   return (
                     <TableRow
@@ -81,7 +86,7 @@ export function ProjectProgressTable({
                       <TableCell className="font-medium">
                         <div
                           className={`truncate ${
-                            compact ? "max-w-[160px]" : "max-w-[180px]"
+                            compact ? "max-w-[110px]" : "max-w-[118px]"
                           }`}
                           title={project.name}
                         >
@@ -95,7 +100,7 @@ export function ProjectProgressTable({
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="flex justify-between items-center text-sm">
+                          <div className="flex justify-between items-center gap-1 text-sm">
                             <span
                               className={`font-medium ${getProgressColor(
                                 project.progress
@@ -110,23 +115,28 @@ export function ProjectProgressTable({
                           <Progress value={project.progress} className="h-2" />
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                      <TableCell className="text-center px-1">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
                           {project.counters.todo}
                         </span>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                      <TableCell className="text-center px-1">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                           {project.counters.inProgress}
                         </span>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                      <TableCell className="text-center px-1">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                          {project.counters.review}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center px-1">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                           {project.counters.completed}
                         </span>
                       </TableCell>
-                      {/* <TableCell className="text-center">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                      {/* <TableCell className="text-center px-1">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
                           {project.counters.completedThisWeek}
                         </span>
                       </TableCell> */}
