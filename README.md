@@ -120,53 +120,6 @@ The dashboard expects projects in this format:
 }
 ```
 
-## ERP Sync (ClickUp → Supabase)
-
-`POST /api/sync` mirrors the ClickUp workspace into the ERP Supabase database so
-other projects (e.g. `uip-infrastructure-erp`) can read it without holding
-ClickUp credentials or competing for ClickUp's rate limits.
-
-It writes only to `clickup_`-prefixed tables. `public.projects` is curated ERP
-data and is never modified by the sync.
-
-| Table | Contents |
-| --- | --- |
-| `clickup_projects` | One row per ClickUp folder, with counters and progress |
-| `clickup_tasks` | Tasks, with raw status plus a derived `bucket` |
-| `clickup_project_snapshots` | One row per project per day — progress history |
-| `clickup_sync_runs` | Audit trail, so a failing sync is visible |
-
-Link a mirrored project to an ERP project by setting `erp_project_id`:
-
-```sql
-update clickup_projects set erp_project_id = '<projects.id>'
-where clickup_id = '<clickup folder id>';
-```
-
-This is deliberately manual — ClickUp folder names and ERP project names do not
-correspond, so automatic name matching would produce wrong links.
-
-**Running it:**
-
-- Automatically, once a day, via the Vercel Cron in `vercel.json`
-- Manually: `curl -X POST -H "Authorization: Bearer $SYNC_SECRET" <url>/api/sync`
-
-Requires `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `SYNC_SECRET`. Reads
-the same `CLICKUP_*` variables as the dashboard, so it always sees the workspace
-shown on screen.
-
-### Snapshots and history
-
-ClickUp's API only ever reports the current state. The daily snapshot table is
-what makes progress-over-time queries possible:
-
-```sql
-select captured_on, progress
-from clickup_project_snapshots
-where clickup_project_id = '<id>'
-order by captured_on;
-```
-
 ## Deployment
 
 ### Vercel (Recommended)
@@ -183,7 +136,6 @@ Make sure to set the environment variables:
 - `CLICKUP_API_KEY`
 - `CLICKUP_TEAM_ID`
 - `CLICKUP_SPACE_ID` (optional)
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_SECRET` (only for `/api/sync`)
 
 The server must be able to reach `api.clickup.com` — if outbound egress is
 restricted, allowlist that host or the dashboard will report a 403.

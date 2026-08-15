@@ -126,15 +126,6 @@ export function isDateThisWeek(dateString: string | null | undefined): boolean {
   }
 }
 
-/** ClickUp millisecond timestamps -> ISO strings for Postgres timestamptz. */
-export function toIsoDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const ms = parseInt(value, 10);
-  if (Number.isNaN(ms)) return null;
-  const date = new Date(ms);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
 export function getClickUpConfig() {
   const apiKey = process.env.CLICKUP_API_KEY;
   const teamId = process.env.CLICKUP_TEAM_ID;
