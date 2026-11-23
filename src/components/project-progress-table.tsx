@@ -26,7 +26,12 @@ export function ProjectProgressTable({
     return "text-red-600";
   };
 
-  const visible = compact ? projects.slice(0, 8) : projects;
+  // Only projects past the threshold are shown, furthest along first.
+  const MIN_PROGRESS = 60;
+  const qualifying = projects
+    .filter((p) => p.progress > MIN_PROGRESS)
+    .sort((a, b) => b.progress - a.progress);
+  const visible = compact ? qualifying.slice(0, 8) : qualifying;
 
   return (
     <Card className={compact ? "h-full" : undefined}>
@@ -36,7 +41,7 @@ export function ProjectProgressTable({
         </CardTitle>
         {!compact && (
           <p className="text-sm text-muted-foreground">
-            Progress overview for all projects
+            Projects over {MIN_PROGRESS}% complete
           </p>
         )}
       </CardHeader>
@@ -66,7 +71,7 @@ export function ProjectProgressTable({
                     colSpan={6}
                     className="text-center py-8 text-muted-foreground"
                   >
-                    No projects available
+                    No projects over {MIN_PROGRESS}% yet
                   </TableCell>
                 </TableRow>
               ) : (
