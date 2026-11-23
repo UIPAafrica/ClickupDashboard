@@ -26,16 +26,9 @@ export function ProjectProgressTable({
     return "text-red-600";
   };
 
-  // The top slots go to the furthest-along projects at 60% or more; every
-  // other project follows in its normal order.
-  const TOP_THRESHOLD = 60;
-  const TOP_COUNT = 6;
-  const top = projects
-    .filter((p) => p.progress >= TOP_THRESHOLD)
-    .sort((a, b) => b.progress - a.progress)
-    .slice(0, TOP_COUNT);
-  const topIds = new Set(top.map((p) => p.id));
-  const ordered = [...top, ...projects.filter((p) => !topIds.has(p.id))];
+  // Ranked by progress, highest first: projects at 60% or more fill the top
+  // rows and the lowest-progress projects sink to the bottom.
+  const ordered = [...projects].sort((a, b) => b.progress - a.progress);
   const visible = compact ? ordered.slice(0, 8) : ordered;
 
   return (
@@ -46,7 +39,7 @@ export function ProjectProgressTable({
         </CardTitle>
         {!compact && (
           <p className="text-sm text-muted-foreground">
-            Top 6 projects at 60% or more, then the rest
+            Ranked by progress, highest first
           </p>
         )}
       </CardHeader>
